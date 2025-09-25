@@ -6,9 +6,9 @@ from typing import Any, Dict, Iterable, List, Optional
 from neo4j import GraphDatabase
 from neo4j.exceptions import Neo4jError
 
-from .errors import InternalServerError
+from api.errors import InternalServerError
 
-from .config import Neo4jConfig
+from api.config import Neo4jConfig
 
 
 @dataclass

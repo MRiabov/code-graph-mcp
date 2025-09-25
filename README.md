@@ -9,32 +9,61 @@ Graph Model Context Protocol (MCP) backend exposing ontology-aligned graph data 
 - Neo4j serves as the storage layer. Access is encapsulated by `src/code_graph_mcp/neo4j_client.py` and `src/code_graph_mcp/repository.py`.
 - FastAPI + Ariadne expose the `/graphql` endpoint via `src/code_graph_mcp/app.py`.
 
-## Running the service
+## Local development
 
-1. **Install dependencies** (example using `pip`):
+### Neo4j (Docker)
+
+1. Create directories to persist Neo4j data and logs:
+
    ```bash
-   pip install -r requirements.txt
+   mkdir -p neo4j/data neo4j/logs
    ```
-2. **Configure Neo4j credentials** via environment variables:
-   - `CODE_GRAPH_NEO4J_URI`
-   - `CODE_GRAPH_NEO4J_USER`
-   - `CODE_GRAPH_NEO4J_PASSWORD`
-   - Optional: `CODE_GRAPH_NEO4J_DATABASE`, `CODE_GRAPH_FETCH_TIMEOUT_S`
-3. **Configure GraphQL safeguards** (optional overrides):
-   - `CODE_GRAPH_MAX_QUERY_DEPTH` (default `6`)
-   - `CODE_GRAPH_DEFAULT_LIMIT` (default `25`)
-   - `CODE_GRAPH_MAX_LIMIT` (default `100`)
-4. **Launch FastAPI** (example with `uvicorn`):
+
+2. Start Neo4j with Docker (includes basic APOC support and persistence):
+
    ```bash
-   uvicorn code_graph_mcp.app:app --reload
+   docker run \
+     --name neo4j-code-graph \
+     -p 7474:7474 \
+     -p 7687:7687 \
+     -e NEO4J_AUTH=neo4j/your_password \
+     -e NEO4J_dbms_security_procedures_unrestricted=apoc.* \
+     -e NEO4JLABS_PLUGINS='["apoc"]' \
+     -v "$(pwd)/neo4j/data:/data" \
+     -v "$(pwd)/neo4j/logs:/logs" \
+     neo4j:5.22
    ```
-5. Access GraphQL Playground at `http://localhost:8000/graphql`.
+
+3. Optional: add an index for faster lookups once the container is running:
+
+   ```cypher
+   CREATE CONSTRAINT entity_id IF NOT EXISTS
+   FOR (n:Entity)
+   REQUIRE n.id IS UNIQUE;
+   ```
+
+### Environment variables
+
+Set the following values locally (e.g., in `.env` or Vercel settings):
+
+- `CODE_GRAPH_NEO4J_URI` (example: `bolt://localhost:7687`)
+- `CODE_GRAPH_NEO4J_USER` (example: `neo4j`)
+- `CODE_GRAPH_NEO4J_PASSWORD` (example: `your_password`)
+- `CODE_GRAPH_NEO4J_DATABASE` (default `neo4j`)
+- Optional overrides: `CODE_GRAPH_FETCH_TIMEOUT_S`, `CODE_GRAPH_MAX_QUERY_DEPTH`, `CODE_GRAPH_DEFAULT_LIMIT`, `CODE_GRAPH_MAX_LIMIT`
+
+### Vercel deployment notes
+
+- `requirements.txt` lists all Python dependencies required by Vercel.
+- `api/index.py` bootstraps the ASGI app, adding both the project root and `src/` to `sys.path` before importing `code_graph_mcp.main`.
+- `vercel.json` routes `/graphql` and all other paths to the Python handler. Make sure `code_graph_mcp_config.yaml` is committed and available at the repository root.
+- Supply the Neo4j environment variables through the Vercel dashboard. The service will fail with `ModuleNotFoundError` or connection errors if they are missing or incorrect.
 
 ## Schema & Introspection
 
 `build_schema_sdl()` compiles the schema dynamically:
+
 - Every ontology entity type becomes a GraphQL object implementing the `Entity` interface.
-- Relation fields respect endpoint constraints (`relation_constraints()`), each with pagination arguments (`limit`, `offset`).
 - Relation target unions are auto-generated where multiple entity types are valid.
 - `EntityType` and `RelationType` enums align with ontology enumerations, enabling introspection-driven discovery.
 
@@ -43,6 +72,7 @@ You can inspect the schema using introspection queries or `GraphQL` Playground d
 ## Query Safety & Validation
 
 Safeguards implemented across the stack include:
+
 - **Depth Limiting:** `DepthLimitRule` in `src/code_graph_mcp/validation.py` enforces configurable maximum GraphQL query depth.
 - **Pagination Caps:** `GraphQLConfig` limits per-query `limit` values (`QueryLimitError` is raised on violations).
 - **Offset/Limit Validation:** Negative values raise `ValidationError` before hitting Neo4j.
@@ -52,6 +82,7 @@ Safeguards implemented across the stack include:
 ## Structured Error Responses
 
 Errors are emitted in a machine-readable format. Example response payload:
+
 ```json
 {
   "errors": [
@@ -79,6 +110,7 @@ Errors are emitted in a machine-readable format. Example response payload:
   ]
 }
 ```
+
 GraphQL validation errors also include a `location` object when available.
 
 ## Access Control

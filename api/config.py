@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 
 CONFIG_FILENAME = "code_graph_mcp_config.yaml"
-CONFIG_PATH = Path(__file__).resolve().parents[2] / CONFIG_FILENAME
+CONFIG_PATH = Path(__file__).resolve().parents[1] / CONFIG_FILENAME
 
 load_dotenv()
 
@@ -83,7 +83,9 @@ def load_config(config_path: Optional[Path] = None) -> AppConfig:
         if env_name:
             database = _env_value(env_name)
 
-    fetch_timeout_raw = neo4j_raw["fetch_timeout_s"] if "fetch_timeout_s" in neo4j_raw else 5.0
+    fetch_timeout_raw = (
+        neo4j_raw["fetch_timeout_s"] if "fetch_timeout_s" in neo4j_raw else 5.0
+    )
     fetch_timeout = float(fetch_timeout_raw)
 
     neo4j_config = Neo4jConfig(

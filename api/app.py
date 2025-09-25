@@ -7,12 +7,12 @@ from ariadne import format_error as ariadne_format_error
 from ariadne.asgi import GraphQL
 from fastapi import FastAPI, Request
 
-from .config import AppConfig, load_config
-from .errors import StructuredError, ValidationError
-from .neo4j_client import Neo4jClient
-from .repository import GraphRepository
-from .resolvers import ResolversBundle, build_resolvers_bundle
-from .validation import depth_limit_rule_factory
+from api.config import AppConfig, load_config
+from api.errors import StructuredError, ValidationError
+from api.neo4j_client import Neo4jClient
+from api.repository import GraphRepository
+from api.resolvers import ResolversBundle, build_resolvers_bundle
+from api.validation import depth_limit_rule_factory
 
 
 @dataclass(frozen=True)

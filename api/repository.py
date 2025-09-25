@@ -5,9 +5,9 @@ from typing import Any, Dict, List, Optional
 
 from neo4j.graph import Node
 
-from .config import GraphQLConfig
-from .neo4j_client import Neo4jClient
-from .ontology import relation_to_neo4j_label
+from api.config import GraphQLConfig
+from api.neo4j_client import Neo4jClient
+from api.ontology import relation_to_neo4j_label
 
 
 @dataclass

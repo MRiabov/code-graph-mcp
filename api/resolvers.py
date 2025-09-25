@@ -11,11 +11,11 @@ from ariadne import (
     make_executable_schema,
 )
 
-from .config import AppConfig
-from .errors import QueryLimitError, ValidationError
-from .repository import GraphRepository
-from .schema_builder import GraphQLSchemaSpec, GraphQLEntitySpec, build_schema_sdl
-from .ontology import (
+from api.config import AppConfig
+from api.errors import QueryLimitError, ValidationError
+from api.repository import GraphRepository
+from api.schema_builder import GraphQLSchemaSpec, GraphQLEntitySpec, build_schema_sdl
+from api.ontology import (
     entity_type_from_enum,
     relation_type_from_enum,
     to_graphql_type_name,

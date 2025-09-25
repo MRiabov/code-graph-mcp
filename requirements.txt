@@ -1,0 +1,7 @@
+fastapi
+ariadne
+uvicorn
+neo4j
+python-dotenv
+pyyaml
+gymnasium

@@ -338,9 +338,11 @@ def graphql_entity_enum_name(entity_type: str) -> str:
     assert entity_type in ENTITY_TYPES, f"Unknown entity type '{entity_type}'"
     return entity_type.upper().replace(" / ", "_").replace(" ", "_")
 
+
 def entity_type_from_enum(enum_value: str) -> str:
     conversions = {
-        graphql_entity_enum_name(entity_type): entity_type for entity_type in ENTITY_TYPES
+        graphql_entity_enum_name(entity_type): entity_type
+        for entity_type in ENTITY_TYPES
     }
     try:
         return conversions[enum_value]
