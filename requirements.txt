@@ -8,3 +8,4 @@ gymnasium
 pydantic
 pydantic-core
 pydantic-settings
+fastmcp

@@ -1,26 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from contextlib import asynccontextmanager
 from typing import Any, Callable, Dict, List
 
 from ariadne import format_error as ariadne_format_error
 from ariadne.asgi import GraphQL
 from fastapi import FastAPI, Request
 
-from api.config import AppConfig, load_config
 from api.errors import StructuredError, ValidationError
-from api.neo4j_client import Neo4jClient
-from api.repository import GraphRepository
-from api.resolvers import ResolversBundle, build_resolvers_bundle
+from api.mcp_server import build_mcp_server
 from api.validation import depth_limit_rule_factory
-
-
-@dataclass(frozen=True)
-class AppState:
-    config: AppConfig
-    neo4j_client: Neo4jClient
-    repository: GraphRepository
-    resolvers: ResolversBundle
+from api.state import AppState, build_state
 
 
 def _build_error_formatter() -> Callable[[Any, bool], Dict[str, Any]]:
@@ -80,26 +70,25 @@ def _create_graphql_app(state: AppState) -> GraphQL:
 
 
 def create_app() -> FastAPI:
-    config = load_config()
-    neo4j_client = Neo4jClient(config.neo4j)
-    repository = GraphRepository(neo4j_client, config.graphql)
-    resolvers = build_resolvers_bundle(config)
-    state = AppState(
-        config=config,
-        neo4j_client=neo4j_client,
-        repository=repository,
-        resolvers=resolvers,
-    )
-
-    app = FastAPI()
-    app.state.graph_state = state
+    state = build_state()
 
     graphql_app = _create_graphql_app(state)
-    app.mount("/graphql", graphql_app)
+    mcp_server = build_mcp_server(state, manage_lifespan=False)
+    mcp_app = mcp_server.http_app(path="/mcp")
 
-    @app.on_event("shutdown")
-    async def shutdown_event() -> None:  # pragma: no cover - lifecycle hook
-        state.neo4j_client.close()
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        async with mcp_app.lifespan(app):
+            try:
+                yield
+            finally:
+                state.neo4j_client.close()
+
+    app = FastAPI(lifespan=lifespan)
+    app.state.graph_state = state
+
+    app.mount("/graphql", graphql_app)
+    app.mount("/mcp", mcp_app)
 
     @app.get("/healthz")
     async def healthcheck() -> Dict[str, str]:
