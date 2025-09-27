@@ -59,6 +59,48 @@ Set the following values locally (e.g., in `.env` or Vercel settings):
 - `vercel.json` routes `/graphql` and all other paths to the Python handler. Make sure `code_graph_mcp_config.yaml` is committed and available at the repository root.
 - Supply the Neo4j environment variables through the Vercel dashboard. The service will fail with `ModuleNotFoundError` or connection errors if they are missing or incorrect.
 
+### Docker usage
+
+Build the container image from the repository root:
+
+```bash
+docker build -t code-graph-mcp .
+```
+
+Run the container after configuring environment variables. The service listens on port `8000` and expects an accessible Neo4j instance:
+
+```bash
+docker run \
+  --rm \
+  --env-file .env \
+  -p 8000:8000 \
+  code-graph-mcp
+```
+
+- Ensure the `.env` file (or explicit `-e` flags) defines `CODE_GRAPH_NEO4J_URI`, `CODE_GRAPH_NEO4J_USER`, `CODE_GRAPH_NEO4J_PASSWORD`, and any optional overrides used in `code_graph_mcp_config.yaml`.
+- If Neo4j runs in Docker on the same network, supply `--network` to `docker run` (e.g., `--network neo4j`) so the container can reach it by service name instead of `localhost`.
+- The FastAPI health check remains available at `http://localhost:8000/healthz`, and GraphQL queries are served at `http://localhost:8000/graphql`.
+
+### Local API + Neo4j container workflow
+
+When Neo4j already runs in Docker (for example via `docker compose`), place the API container on the same network so it can dial the database by service name:
+
+1. **Discover networks.** Identify the compose network (e.g., `opik_default`) with `docker network ls`.
+2. **Attach Neo4j (if required).** Ensure the `neo4j-code-graph` container participates in that network: `docker network connect opik_default neo4j-code-graph`.
+3. **Prepare env secrets.** Update `.env` with the real Neo4j credentials. Keep `CODE_GRAPH_NEO4J_URI` set to `bolt://neo4j-code-graph:7687` (service name instead of `localhost`).
+4. **Start the API container.**
+
+   ```bash
+   docker run \
+     --rm \
+     --network opik_default \
+     --env-file .env \
+     -p 8000:8000 \
+     code-graph-mcp
+   ```
+
+5. **Validate connectivity.** `curl http://localhost:8000/healthz` should return `{ "status": "ok" }`. Queries are served from `http://localhost:8000/graphql`.
+
 ## Schema & Introspection
 
 `build_schema_sdl()` compiles the schema dynamically:

@@ -1,7 +1,10 @@
-fastapi
+fastapi[standard]
 ariadne
 uvicorn
 neo4j
 python-dotenv
 pyyaml
 gymnasium
+pydantic
+pydantic-core
+pydantic-settings

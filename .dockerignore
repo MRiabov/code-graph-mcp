@@ -1,0 +1,10 @@
+__pycache__
+*.py[cod]
+*$py.class
+.env
+neo4j/
+.vercel/
+.windsurf/
+.ruff_cache/
+.git
+.gitignore
